@@ -1,8 +1,11 @@
-// src/middleware.ts
+// src/proxy.ts
 import withAuth from "next-auth/middleware";
 
-// Exportamos explícitamente la función por defecto que Next.js espera
-export default withAuth;
+export default withAuth({
+  pages: {
+    signIn: "/signIn",
+  },
+});
 
 export const config = {
   matcher: ["/dashboard/:path*", "/profile/:path*"],
