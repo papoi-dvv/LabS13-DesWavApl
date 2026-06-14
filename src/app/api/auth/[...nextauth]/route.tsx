@@ -68,12 +68,14 @@ export const authOptions: NextAuthOptions = {
           data: {
             failedLoginAttempts: 0,
             lockedUntil: null,
+            isOnline: true,
+            lastSeen: now,
           },
         });
 
         return {
           id: user.id,
-          name: user.name,
+          name: user.alias ?? user.name,
           email: user.email,
           image: user.image,
         };
@@ -90,6 +92,87 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+  },
+  callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "credentials") {
+        return true;
+      }
+
+      if (!user.email) {
+        return false;
+      }
+
+      await prisma.user.upsert({
+        where: { email: user.email },
+        update: {
+          name: user.name,
+          image: user.image,
+          isOnline: true,
+          lastSeen: new Date(),
+        },
+        create: {
+          name: user.name,
+          alias: user.name,
+          email: user.email,
+          image: user.image,
+          isOnline: true,
+          lastSeen: new Date(),
+        },
+      });
+
+      return true;
+    },
+    async jwt({ token, trigger, session }) {
+      if (trigger === "update" && session) {
+        const updatedSession = session as {
+          name?: unknown;
+        };
+
+        if (typeof updatedSession.name === "string") {
+          token.name = updatedSession.name;
+        }
+      }
+
+      if (!token.email) {
+        return token;
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: token.email },
+        select: {
+          id: true,
+          name: true,
+          alias: true,
+        },
+      });
+
+      if (dbUser) {
+        token.sub = dbUser.id;
+        token.name = dbUser.alias ?? dbUser.name;
+        token.picture = undefined;
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.name = token.name;
+
+        if (session.user.email) {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            select: {
+              image: true,
+            },
+          });
+
+          session.user.image = dbUser?.image ?? null;
+        }
+      }
+
+      return session;
+    },
   },
   pages: {
     signIn: "/signIn",

@@ -1,36 +1,132 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next Auth App
 
-## Getting Started
+Aplicacion Full-Stack construida con Next.js 16, TypeScript, Tailwind CSS, NextAuth.js, Prisma 7 y PostgreSQL. Incluye autenticacion OAuth/credenciales, dashboard de usuarios, presencia online/offline, perfil editable, avatar personalizable y datos de prueba con Prisma Seed.
 
-First, run the development server:
+## Requisitos Previos
+
+- Node.js compatible con Next.js 16.
+- Docker y Docker Compose, o PostgreSQL instalado localmente.
+- Credenciales OAuth de Google y GitHub.
+
+## Variables de Entorno
+
+Copia `.env.example` a `.env.local` y completa tus valores reales:
+
+```bash
+cp .env.example .env.local
+```
+
+Ejemplo para PostgreSQL local en Docker usando puerto alternativo `5433`:
+
+```env
+DATABASE_URL="postgresql://postgres:password123@localhost:5433/nextauth_db?schema=public"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="replace-with-a-secure-random-secret"
+
+GOOGLE_CLIENT_ID="replace-with-google-client-id"
+GOOGLE_CLIENT_SECRET="replace-with-google-client-secret"
+
+GITHUB_ID="replace-with-github-client-id"
+GITHUB_SECRET="replace-with-github-client-secret"
+```
+
+No subas `.env.local` ni secretos reales al repositorio.
+
+## PostgreSQL con Docker
+
+Si no tienes PostgreSQL local, levanta un contenedor en el puerto `5433`:
+
+```bash
+docker run --name nextauth-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=password123 \
+  -e POSTGRES_DB=nextauth_db \
+  -p 5433:5432 \
+  -d postgres:16
+```
+
+Para detenerlo:
+
+```bash
+docker stop nextauth-postgres
+```
+
+Para volver a iniciarlo:
+
+```bash
+docker start nextauth-postgres
+```
+
+## Instalacion y Desarrollo
+
+Instala dependencias:
+
+```bash
+npm install
+```
+
+Ejecuta migraciones y genera Prisma Client:
+
+```bash
+npm run prisma:migrate
+npm run prisma:generate
+```
+
+Carga datos de prueba:
+
+```bash
+npm run prisma:seed
+```
+
+Inicia el servidor de desarrollo:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts Disponibles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev`: inicia Next.js en desarrollo.
+- `npm run build`: genera el build de produccion.
+- `npm run start`: ejecuta el build de produccion.
+- `npm run lint`: ejecuta ESLint.
+- `npm run prisma:migrate`: aplica migraciones en desarrollo.
+- `npm run prisma:generate`: genera Prisma Client.
+- `npm run prisma:studio`: abre Prisma Studio.
+- `npm run prisma:seed`: ejecuta `npx prisma db seed`.
 
-## Learn More
+## Prisma Seed
 
-To learn more about Next.js, take a look at the following resources:
+El seed se encuentra en `prisma/seed.ts`. Limpia la tabla `User` e inserta 5 usuarios de prueba con:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `id` unico.
+- nombre y alias.
+- correo.
+- password cifrado con `bcrypt`.
+- URL de avatar.
+- estado `isOnline`.
+- `lastSeen` con tiempos relativos realistas.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Tambien puedes ejecutarlo directamente con:
 
-## Deploy on Vercel
+```bash
+npx prisma db seed
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## OAuth Callbacks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configura estos callbacks en tus proveedores:
+
+- Google: `http://localhost:3000/api/auth/callback/google`
+- GitHub: `http://localhost:3000/api/auth/callback/github`
+
+## Avatar de Perfil
+
+La pantalla `/profile` permite actualizar avatar de dos formas:
+
+- Pegando una URL directa a una imagen.
+- Subiendo un archivo local, convertido a Base64 para pruebas.
+
+Para produccion, se recomienda almacenar archivos en un servicio dedicado como Supabase Storage, S3 o Cloudinary y guardar solo la URL final en Prisma.
