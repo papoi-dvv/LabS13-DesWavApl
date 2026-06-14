@@ -1,13 +1,15 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { FaGithub, FaGoogle } from "react-icons/fa";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = getSafeCallbackUrl(searchParams.get('callbackUrl'));
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,12 +27,12 @@ export default function LoginPage() {
     const result = await signIn('credentials', {
       email,
       password,
-      callbackUrl: '/dashboard',
+      callbackUrl,
       redirect: false
     });
 
     if (result?.ok) {
-      router.push('/dashboard');
+      router.push(callbackUrl);
       router.refresh();
       return;
     }
@@ -66,12 +68,12 @@ export default function LoginPage() {
     const result = await signIn('credentials', {
       email,
       password,
-      callbackUrl: '/dashboard',
+      callbackUrl,
       redirect: false
     });
 
     if (result?.ok) {
-      router.push('/dashboard');
+      router.push(callbackUrl);
       router.refresh();
       return;
     }
@@ -83,7 +85,7 @@ export default function LoginPage() {
 
   const handleProviderSignIn = async (provider: 'google' | 'github') => {
     await signIn(provider, {
-      callbackUrl: '/dashboard',
+      callbackUrl,
     });
   };
 
@@ -249,4 +251,12 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+function getSafeCallbackUrl(callbackUrl: string | null) {
+  if (!callbackUrl || !callbackUrl.startsWith('/') || callbackUrl.startsWith('//')) {
+    return '/dashboard';
+  }
+
+  return callbackUrl;
 }
